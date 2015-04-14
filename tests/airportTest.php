@@ -27,26 +27,56 @@ class AirportTest extends PHPUnit_Framework_TestCase{
     $this->checkPlanesTest($airport, []);
   }
 
-  public function testCanReceiveAPlane(){
-    $plane = $this->getMock('Plane');
+  public function testCanDockAPlane(){
     $airport = $this->setUpTest('Sunny');
-    $airport->receive($plane);
-    $this->checkPlanesTest($airport, [$plane]);
+    $airport->dock($this->plane);
+    $this->checkPlanesTest($airport, [$this->plane]);
   }
 
   public function testCanReleaseAPlane(){
-    $plane = $this->getMock('Plane');
     $airport = $this->setUpTest('Sunny');
-    $airport->receive($plane);
-    $airport->release($plane);
-
+    $airport->dock($this->plane);
+    $airport->release($this->plane);
     $this->checkPlanesTest($airport, []);
+  }
+
+  public function testIsNotFull(){
+    $airport = $this->setUpTest('Sunny');
+    $expected = $airport->checkSpace();
+    $this->assertTrue($expected);
+  }
+
+  public function testIsFull(){
+    $airport = $this->setUpTest('Sunny', 1);
+    $airport->dock($this->plane);
+    $expected = $airport->checkSpace();
+    $this->assertFalse($expected);
+  }
+
+  public function testCannotDockPlaneIfCapacityExceeded(){
+    $airport = $this->setUpTest('Sunny', 1);
+    $airport->dock($this->plane);
+    $expected = $airport->dock($this->plane);
+    $this->assertEquals($expected, 'Plane cannot land');
   }
 
   public function testCanCheckWeather(){
     $airport = $this->setUpTest('Sunny');
     $expected = $airport->checkWeather();
     $this->assertEquals($expected, 'Sunny');
+  }
+
+  public function testCannotDockPlaneIfWeatherStormy(){
+    $airport = $this->setUpTest('Stormy');
+    $expected = $airport->dock($this->plane);
+    $this->assertEquals($expected, 'Plane cannot land');
+  }
+
+  public function testCannotReleasePlaneIfWeatherIsStormy(){
+    $airport = $this->setUpTest('Stormy');
+    $airport->planes = [$this->plane];
+    $expected = $airport->release($this->plane);
+    $this->assertEquals($expected, 'Plane cannot take off');
   }
 
   // helpers
@@ -64,7 +94,8 @@ class AirportTest extends PHPUnit_Framework_TestCase{
   }
 
   public function setUpTest($setWeather, $capacity = null){
-    $weather = $this->createWeatherStub('Sunny');
+    $this->plane = $this->getMock('Plane');
+    $weather = $this->createWeatherStub($setWeather);
     $airport = new Airport($weather);
     if($capacity){
       $airport = new Airport($weather, $capacity);
